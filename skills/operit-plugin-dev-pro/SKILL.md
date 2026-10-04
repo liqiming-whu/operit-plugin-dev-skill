@@ -71,6 +71,8 @@ description: 在 Operit Android App 内开发、续写、调试、安装和排�
 
 ## 规则分级
 
+结论的证据效力不按正式版或 Beta 发布通道区分。记录复现时的 Operit versionName/versionCode、已核实的构建来源或通道、设备权限、插件与调试工具版本、调用路径和复现方法；未知字段明确标记。单一环境实测属于版本相关证据，不能自动提升为平台不变量；环境变化后重新验证相关结论。
+
 始终遵守：
 
 - render/UI 树构造保持无副作用。
@@ -83,6 +85,7 @@ description: 在 Operit Android App 内开发、续写、调试、安装和排�
 - `ctx.callTool` 并发响应关联；未验证时默认串行相关调用，但不要永久禁止所有并发。
 - 异步 `setState`、onLoad/action 窗口和重绘触发方式。
 - 模块实例生命周期、env 持久化和 ToolPkg 缓存刷新。
+- `ctx.callTool` 返回形态、安装结果字段、终端关闭与运行时回收的边界。
 
 仅在需求成立时采用：
 

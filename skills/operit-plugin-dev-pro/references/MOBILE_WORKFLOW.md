@@ -79,3 +79,18 @@
 4. 再打开真实 UI 或调用工具。
 
 应用私有 `toolpkg_cache` 受权限和实现版本影响，不把它作为通用脚本的强制检查项；需要深入排障时结合当前源码、root/Shizuku 权限和日志检查。
+
+
+## 7. 当前版本约束：安装结果与环境证据
+
+以下观察来自 2026-09-14，Operit `1.12.1+6`（versionCode 49，Beta 更新计划开启）；设备权限和调试工具版本未随摘要完整记录，目标环境需复验。
+
+- **第 5 步**：使用独立暂存包作为 `debug_install_toolpkg.source_path`，并在替换前备份现有安装包。现场替换失败不等于相同路径必失败，完整路径与安装器版本的排查见 `DEBUG_PLAYBOOK.md`。
+- **第 6 步部署核验**：检查完整安装结果的 `data.related_load_errors`，该字段应是非 null、非数组的对象映射，且 `Object.keys(errors).length === 0`。字段缺失、类型错误或未取得刷新结果时标记未验证，不能视为空；此字段由安装工具返回，`verify_deployment.js` 仅做文件存在性核验并列出人工检查项。
+- 空错误映射只是必要检查，还需核对实际加载的目标包、manifest 版本与代码标记，并完成第 5、6 节的真实 UI / 工具验证。隔离开发探针中的免重启缓存观察不替代正式部署的重启核验。
+- **平台版本与构建记录**：
+  - 用 `PackageManager.getPackageInfo(pkg, 0)` 记录 versionName、versionCode；现场分别为 `1.12.1+6`、49。
+  - `user_preferences.preferences_pb` 的 `beta_plan_enabled=true` 记录 Beta 更新计划开启；它是可修改的更新偏好，不能单独确定已安装产物的发布通道。构建来源或发布通道需另行核实，无法核实时标记未知。
+  - `ApplicationInfo.flags & FLAG_DEBUGGABLE` 只反映可调试标志；现场为 false，不能据此判断发布通道或签名身份。
+- **`api_version` 门禁**：声明必须被目标应用支持；现场日志列出 `1.0.0`、`1.0.1`。支持集合及失败原因的核对方式见 `DEBUG_PLAYBOOK.md`。
+- **`ctx.callTool` 返回形态**：现场所测工具返回 JSON 文本；目标工具需探针确认，并兼容契约允许的对象与文本结果，见 `COMPOSE_DSL_RULES.md`。

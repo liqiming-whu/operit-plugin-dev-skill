@@ -39,3 +39,17 @@
 1. 不回退 hiddenExec、不恢复隐式业务拉起、不用宽泛 kill（按 PID 精确管理，PID 文件为准）。
 2. 任何终端调用改动都要进版本库且可回滚；服务进程管理统一收敛到独立模块（如 `worker_runtime`），对外只暴露语义接口（`ensureWorker/installDeps/restartWorker`），内部 transport 用 `Tools.System.terminal`。
 3. 与 `COMPLEX_UI_ARCHITECTURE.md` 配合：Web 服务/Worker 的启动投递、健康确认、资源同步均按本文件执行。
+
+
+## 当前版本约束：`setsid` 与运行时回收
+
+- **版本相关证据**：2026-09-14，Operit `1.12.1+6`（versionCode 49，Beta 更新计划开启）中，用 `nohup setsid ... &` 启动的所测服务 `PID=SID=20005`，调用方 shell 的 `SID=29469`。设备权限与运行时配置未随摘要完整记录，采用前需复验。
+- SID 不同证明新会话已建立，不证明所有关闭路径都不发送信号。`setsid` 建立新会话，`nohup` 设置忽略 `SIGHUP`；宿主主动按 PID、进程树或运行时范围清理仍可能终止服务。健康检查还需覆盖实际 terminal close 与运行时重启。[setsid](https://man7.org/linux/man-pages/man2/setsid.2.html)、[nohup](https://man7.org/linux/man-pages/man1/nohup.1.html)。
+- 可用 `ps` 的 PID/SID 输出核对会话；读取 `/proc/<pid>/stat` 第 6 字段时需正确解析带括号的 comm，不能直接按空白切分。
+- 现场报告运行时重启或回收会终止服务；独立会话不能保证跨 App 或 Linux 运行时重启存活。关闭路径与回收范围以目标环境测试为准。
+
+## 项目策略：显式恢复服务
+
+- 现场项目在服务被终止后，通过带自愈行为的状态工具重新拉起服务。这属于该项目恢复策略，不是只读状态查询的默认契约。
+- 状态查询只报告健康状态；需要恢复时调用显式 `ensureWorker` / `restartWorker` 入口。启动由 single-flight 和有界健康轮询管理，遵守上文“不恢复隐式业务拉起”的边界。
+- 恢复需等运行时就绪；启动期延迟与重试参数按目标环境验证，不能保证 App 被终止期间仍可恢复。健康以 HTTP / 进程探测为准。
